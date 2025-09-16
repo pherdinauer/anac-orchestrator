@@ -37,12 +37,12 @@ registry:
       - data_aggiudicazione_definitiva
       - esito
   discovery_timestamp: C:\Users\desiderato\Documents\ANAC DB ULTIMATE
-  json_root: C:\Users\DESIDE~1\AppData\Local\Temp\tmp3zww2ztf\JSON
+  json_root: C:\Users\DESIDE~1\AppData\Local\Temp\tmpqnhfvt44\JSON
   ndjson_root: database\NDJSON
   unknown_datasets:
   - folder: 20240201-bando_cig_json
     name: bando_cig
-    path: C:\Users\DESIDE~1\AppData\Local\Temp\tmp3zww2ztf\JSON\20240201-bando_cig_json
+    path: C:\Users\DESIDE~1\AppData\Local\Temp\tmpqnhfvt44\JSON\20240201-bando_cig_json
   - folder: 20240201-unknown_dataset_json
     name: unknown_dataset
-    path: C:\Users\DESIDE~1\AppData\Local\Temp\tmp3zww2ztf\JSON\20240201-unknown_dataset_json
+    path: C:\Users\DESIDE~1\AppData\Local\Temp\tmpqnhfvt44\JSON\20240201-unknown_dataset_json

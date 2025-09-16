@@ -46,10 +46,14 @@ fi
 # Carica variabili d'ambiente se il file .env esiste
 if [ -f ".env" ]; then
     log "Caricamento configurazione da .env..."
-    export $(cat .env | grep -v '^#' | xargs)
+    # Carica le variabili d'ambiente in modo sicuro
+    set -a  # automatically export all variables
+    source .env
+    set +a  # stop automatically exporting
     success "Configurazione caricata"
 else
     warning "File .env non trovato, usando configurazione di default"
+    warning "Copia .env.example in .env e configura le tue credenziali"
 fi
 
 # Verifica dipendenze
@@ -76,11 +80,25 @@ success "Dipendenze verificate"
 
 # Pull dell'ultima versione
 log "Aggiornamento codice da GitHub..."
-if git pull origin main; then
-    success "Codice aggiornato con successo"
+
+# Risolvi eventuali problemi di ownership Git
+if ! git pull origin main 2>/dev/null; then
+    warning "Problema con Git ownership rilevato"
+    log "Tentativo di risoluzione automatica..."
+    
+    # Aggiungi la directory corrente come safe directory
+    git config --global --add safe.directory "$(pwd)" 2>/dev/null || true
+    
+    # Riprova il pull
+    if git pull origin main; then
+        success "Codice aggiornato dopo risoluzione ownership"
+    else
+        error "Errore durante il pull del codice"
+        error "Esegui manualmente: git config --global --add safe.directory $(pwd)"
+        exit 1
+    fi
 else
-    error "Errore durante il pull del codice"
-    exit 1
+    success "Codice aggiornato con successo"
 fi
 
 # Installa/aggiorna dipendenze Python
