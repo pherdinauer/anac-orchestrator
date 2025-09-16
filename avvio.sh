@@ -89,12 +89,30 @@ if ! git pull origin main 2>/dev/null; then
     # Aggiungi la directory corrente come safe directory
     git config --global --add safe.directory "$(pwd)" 2>/dev/null || true
     
+    # Controlla se ci sono problemi di permessi sui file .git
+    if [ ! -w ".git/FETCH_HEAD" ] 2>/dev/null; then
+        warning "Problemi di permessi sui file .git rilevati"
+        log "Tentativo di correzione permessi..."
+        
+        # Prova a correggere i permessi (richiede sudo)
+        if sudo chown -R $(whoami):$(whoami) .git 2>/dev/null; then
+            success "Permessi .git corretti"
+        else
+            error "Impossibile correggere i permessi automaticamente"
+            error "Esegui manualmente: sudo chown -R $(whoami):$(whoami) .git"
+            error "Oppure riclona il repository: rm -rf . && git clone https://github.com/pherdinauer/anac-orchestrator.git ."
+            exit 1
+        fi
+    fi
+    
     # Riprova il pull
     if git pull origin main; then
-        success "Codice aggiornato dopo risoluzione ownership"
+        success "Codice aggiornato dopo risoluzione problemi Git"
     else
         error "Errore durante il pull del codice"
-        error "Esegui manualmente: git config --global --add safe.directory $(pwd)"
+        error "Prova a riclonare il repository:"
+        error "  cd .. && rm -rf anac-orchestrator"
+        error "  git clone https://github.com/pherdinauer/anac-orchestrator.git"
         exit 1
     fi
 else

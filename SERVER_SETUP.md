@@ -2,19 +2,31 @@
 
 ## Risoluzione Problemi Comuni
 
-### 1. Problema Git Ownership
+### 1. Problema Git Ownership e Permessi
 
-Se ricevi l'errore:
+Se ricevi errori come:
 ```
 fatal: detected dubious ownership in repository at '/home/adm01/GIT/anac-orchestrator'
+error: cannot open '.git/FETCH_HEAD': Permission denied
 ```
 
 **Soluzione automatica (già integrata nello script):**
-Lo script `avvio.sh` ora risolve automaticamente questo problema.
+Lo script `avvio.sh` ora risolve automaticamente questi problemi.
 
 **Soluzione manuale:**
 ```bash
+# 1. Configura safe directory
 git config --global --add safe.directory /home/adm01/GIT/anac-orchestrator
+
+# 2. Correggi permessi
+sudo chown -R $(whoami):$(whoami) .git
+chmod -R 755 .git
+
+# 3. Se ancora non funziona, riclona
+cd ..
+rm -rf anac-orchestrator
+git clone https://github.com/pherdinauer/anac-orchestrator.git
+cd anac-orchestrator
 ```
 
 ### 2. Problema File .env
