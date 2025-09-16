@@ -1,0 +1,108 @@
+Perfetto 🚀
+Ecco il **secondo prompt per Cursor**, dedicato esclusivamente alla parte **ingest** (conversione JSON → NDJSON, staging, upsert su core, gestione figli/padri, logging).
+
+---
+
+# **Prompt per Cursor – ANAC Orchestrator (Ingest pipeline)**
+
+**Titolo:** ANAC Orchestrator — Ingest JSON → Staging → Core (Padri/Figli + Pending)
+
+---
+
+## **Obiettivo**
+
+Costruire un modulo/CLI Python che, partendo dal DB già creato con le migrazioni v1+v2, gestisca l’ingest notturno dei dataset ANAC:
+
+1. **Scansione cartelle** `/database/JSON/<YYYYMMDD>-<dataset>_json/*.json`
+2. **Conversione** in `/database/NDJSON/...` (1 record per riga)
+3. **Caricamento** con `LOAD DATA LOCAL INFILE` in tabelle `stg_*_json`
+4. **Proiezione** dai payload JSON → `stg_*` tipizzate
+5. **UPSERT** verso le tabelle core (quelle del TXT) rispettando l’ordine **padri → figli**
+6. **Gestione “pending children”**: se manca la FK padre, non fallire ma lascia il record in staging
+7. **Log** in tabelle ETL (`etl_runs`, `etl_files`, `etl_rejects`) e file log
+8. **Comandi CLI**: `convert`, `load`, `upsert`, `run`, `status`, `dry-run`
+
+---
+
+## **Struttura directory**
+
+* RAW JSON: `/database/JSON/`
+* NDJSON (output conversione): `/database/NDJSON/`
+* Log: `/database/logs/anac_etl.log`
+* Config YAML: `/config/anac_etl.yml` (già creato nel prompt schema)
+
+---
+
+## **Workflow dettagliato**
+
+1. **Convert JSON → NDJSON**
+
+   * Usa `json_pointer` definito nel registry (es. `"item"` per array top-level, `"records.item"` se i file hanno wrapper).
+   * Output 1 file `.ndjson` per ogni `.json` RAW, nello stesso path relativo sotto NDJSON.
+   * Parallelizza (workers configurabili).
+   * Logga #record, md5 file.
+
+2. **Load NDJSON → stg\_\*\_json**
+
+   * Usa `LOAD DATA LOCAL INFILE`.
+   * Tabella `stg_<dataset>_json(payload JSON, _file_name, _ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`.
+   * Ogni riga = record JSON.
+   * Registra in `etl_files` (#righe, md5, status).
+
+3. **Proiezione JSON → stg\_**\*
+
+   * Per ogni dataset, prendi `select_map` dal registry: mapping colonna → espressione SQL (`JSON_EXTRACT`, `STR_TO_DATE`, ecc.).
+   * Esegui `INSERT INTO stg_<dataset> (...) SELECT ... FROM stg_<dataset>_json`.
+   * Usa `ON DUPLICATE KEY UPDATE` per idempotenza.
+
+4. **Upsert verso core**
+
+   * Esegui nell’ordine **padri → figli** in base a `depends_on` del registry:
+
+     * Prima `bando_cig` (e anagrafiche SA, CUP, categorie, …)
+     * Poi `aggiudicazioni`
+     * Poi i figli di `aggiudicazioni` (aggiudicatari, partecipanti, subappalti, stati\_avanzamento, varianti, fine\_contratto, collaudo, quadro\_economico, fonti\_finanziamento).
+   * Per ogni dataset:
+
+     ```sql
+     INSERT INTO core_table (col1, col2, …)
+     SELECT col1, col2, … FROM stg_<dataset>
+     ON DUPLICATE KEY UPDATE colX = VALUES(colX), colY = VALUES(colY);
+     ```
+   * Se un record viola una FK (padre mancante): non far fallire → lascia il record in staging. Registra in `etl_metrics` che ci sono pending children.
+
+5. **Rejects**
+
+   * Se parsing fallisce su una riga NDJSON, sposta quella riga in `etl_rejects` con motivo e payload.
+   * Se `LOAD DATA` fallisce per un file, marca `etl_files.status=ERROR` e continua con gli altri.
+
+6. **Status**
+
+   * Comando `status` che mostra: ultimo run, #file caricati, #righe, #reject, #pending per dataset.
+   * Query tipiche: `SELECT COUNT(*) FROM stg_<dataset> WHERE NOT EXISTS (SELECT 1 FROM core_table WHERE ...)`.
+
+---
+
+## **CLI richiesti**
+
+* `anac-etl convert [--dataset NAME|--since YYYYMM|--all]` → JSON→NDJSON
+* `anac-etl load [--dataset NAME|--since YYYYMM|--all]` → NDJSON→stg\_json
+* `anac-etl upsert [--dataset NAME|--since YYYYMM|--all]` → staging→core
+* `anac-etl run [--since YYYYMM|--all]` → esegue tutto in sequenza
+* `anac-etl status` → riepilogo etl\_runs, etl\_files, pending children
+* `anac-etl dry-run` → mostra cosa farebbe senza caricare
+
+---
+
+## **Accettazione**
+
+* `anac-etl run --since 202402` converte e carica `bando_cig` e `aggiudicazioni` in staging, popola core coerentemente.
+* Se mancano padri, i figli restano in staging; `status` mostra quanti.
+* Log in `etl_runs` e `etl_files` corretti (#righe, md5).
+* Query su `bando_cig.cig` e `bando_cig.cf_amministrazione_appaltante` rispondono in <1s grazie agli indici già creati.
+* Tutto idempotente: rilanciare lo stesso file non crea duplicati.
+* Errori su singoli file/record non fermano il run.
+
+---
+
+Vuoi che ti prepari anche un **registry YAML di esempio** già pronto (con bando\_cig e aggiudicazioni configurati) così Cursor ha un template da cui partire?

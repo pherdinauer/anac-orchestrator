@@ -1,0 +1,343 @@
+-- ===========================
+--  MySQL schema ANAC (TEXT-first)
+--  Compatibile MySQL 8.x
+--  Charset/Collation: utf8mb4 / utf8mb4_unicode_ci
+-- ===========================
+
+-- CREA DB (se non esiste) e selezionalo
+CREATE DATABASE IF NOT EXISTS anacdb
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE anacdb;
+
+-- ================
+-- TABELLE
+-- ================
+
+-- bando_cig 
+CREATE TABLE IF NOT EXISTS bando_cig (
+  cig VARCHAR(255) PRIMARY KEY,
+  cig_accordo_quadro TEXT,
+  numero_gara TEXT,
+  oggetto_gara TEXT,
+  importo_complessivo_gara DOUBLE,
+  n_lotti_componenti INT,
+  oggetto_lotto TEXT,
+  importo_lotto DOUBLE,
+  oggetto_principale_contratto TEXT,
+  stato TEXT,
+  luogo_istat TEXT,
+  provincia TEXT,
+  data_pubblicazione DATE,
+  data_scadenza_offerta DATE,
+  tipo_scelta_contraente TEXT,
+  modalita_realizzazione TEXT,
+  codice_ausa TEXT,
+  cf_amministrazione_appaltante TEXT,
+  denominazione_amministrazione_appaltante TEXT,
+  sezione_regione TEXT,
+  cod_cpv TEXT,
+  descrizione_cpv TEXT,
+  flag_prevalente TEXT,
+  cod_motivo_cancellazione INT,
+  motivo_cancellazione TEXT,
+  data_cancellazione DATE,
+  modalita_indizione_servizi TEXT,
+  durata_prevista DOUBLE,
+  strumento_svolgimento TEXT,
+  cf_sa_delegante TEXT,
+  denominazione_sa_delegante TEXT,
+  cf_sa_delegata TEXT,
+  denominazione_sa_delegata TEXT,
+  importo_sicurezza DOUBLE,
+  tipo_appalto_riservato TEXT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- aggiudicazioni 
+CREATE TABLE IF NOT EXISTS aggiudicazioni (
+  id_aggiudicazione INT PRIMARY KEY,
+  cig VARCHAR(255),
+  data_aggiudicazione_definitiva TEXT,
+  esito TEXT,
+  criterio_aggiudicazione TEXT,
+  data_comunicazione_esito TEXT,
+  numero_offerte_ammessse INT,
+  numero_offerte_escluse INT,
+  importo_aggiudicazione DOUBLE,
+  ribasso_aggiudicazione DOUBLE,
+  num_imprese_offerenti INT,
+  flag_subappalto TINYINT(1),
+  cod_esito INT,
+  num_imprese_richiedenti INT,
+  asta_elettronica INT,
+  num_imprese_invitate INT,
+  massimo_ribasso DOUBLE,
+  minimo_ribasso DOUBLE,
+  flag_scomputo TINYINT(1),
+  cod_presentazioni_comprese INT,
+  presentazioni_comprese TEXT,
+  cig_prog_esterna TEXT,
+  data_incarico_prog DATE,
+  data_cons_prog DATE,
+  cod_modo_riaggiudicazione INT,
+  modo_riaggiudicazione TEXT,
+  flag_proc_accelerata TINYINT(1),
+  n_manif_interesse INT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- stazioni_appaltanti 
+CREATE TABLE IF NOT EXISTS stazioni_appaltanti (
+  codice_fiscale VARCHAR(16) PRIMARY KEY,
+  partita_iva VARCHAR(11),
+  denominazione TEXT,
+  codice_ausa VARCHAR(10),
+  natura_giuridica_descrizione TEXT,
+  provincia_codice VARCHAR(2),
+  indirizzo_odonomo TEXT,
+  cap VARCHAR(5),
+  stato VARCHAR(50),
+  cig VARCHAR(255)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- cup 
+CREATE TABLE IF NOT EXISTS cup (
+  cup VARCHAR(15) PRIMARY KEY,
+  cig VARCHAR(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- partecipanti 
+CREATE TABLE IF NOT EXISTS partecipanti (
+  codice_fiscale VARCHAR(16) PRIMARY KEY,
+  cig VARCHAR(255) NOT NULL,
+  ruolo TEXT,
+  denominazione TEXT,
+  tipo_soggetto TEXT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- varianti 
+CREATE TABLE IF NOT EXISTS varianti (
+  id_variante VARCHAR(50) PRIMARY KEY,
+  cod_motivo_variante VARCHAR(20),
+  motivo_variante TEXT,
+  data_approvazione_variante DATE,
+  cig VARCHAR(10),
+  id_aggiudicazione INT,
+  cig_proroga VARCHAR(10),
+  data_atto_aggiuntivo DATE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- subappalti
+CREATE TABLE IF NOT EXISTS subappalti (
+  id_subappalto VARCHAR(50) PRIMARY KEY,
+  cig VARCHAR(10) NOT NULL,
+  cf_subappaltante VARCHAR(16),
+  data_autorizzazione DATE,
+  oggetto TEXT,
+  cod_categoria VARCHAR(10),
+  descrizione_categoria TEXT,
+  classe_importo VARCHAR(20),
+  descrizione_tipo_categoria TEXT,
+  cod_cpv VARCHAR(20),
+  descrizione_cpv TEXT,
+  codice_fiscale VARCHAR(16),
+  denominazione TEXT,
+  tipo_soggetto TEXT,
+  id_aggiudicazione INT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- stati_avanzamento
+CREATE TABLE IF NOT EXISTS stati_avanzamento (
+  cig VARCHAR(50) PRIMARY KEY,
+  denominazione_sal TEXT,
+  flag_ritardo TEXT,
+  data_emissione_sal DATE,
+  importo_sal DOUBLE,
+  n_giorni_scostamento INT,
+  progressivo_sal INT,
+  id_aggiudicazione INT,
+  data_cert_pagamento DATE,
+  importo_cert_pagamento DOUBLE,
+  giorni_proroga INT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- quadro_economico 
+CREATE TABLE IF NOT EXISTS quadro_economico (
+  cig VARCHAR(50) PRIMARY KEY,
+  data DATE,
+  descrizione_evento TEXT,
+  importo_sicurezza DOUBLE,
+  dettaglio_evento TEXT,
+  importo_forniture DOUBLE,
+  importo_lavori DOUBLE,
+  importo_progettazione DOUBLE,
+  id_aggiudicazione INT,
+  somme_a_disposizione DOUBLE,
+  importo_servizi DOUBLE,
+  ulteriori_oneri_non_soggetti_ribasso DOUBLE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- lavorazioni 
+CREATE TABLE IF NOT EXISTS lavorazioni (
+  cod_tipo_lavorazione INT PRIMARY KEY,
+  cig VARCHAR(255),
+  tipo_lavorazione TEXT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- fonti_finanziamento 
+CREATE TABLE fonti_finanziamento (
+  cig VARCHAR(50) PRIMARY KEY,
+  entrate_pubbl_regionali DOUBLE,
+  trasf_immobili_art53 DOUBLE,
+  fondi_bilancio_competente DOUBLE,
+  mutuo DOUBLE,
+  entrate_pubbl_centrale DOUBLE,
+  id_aggiudicazione INT,
+  entrate_pubbl_locale DOUBLE,
+  altro DOUBLE,
+  entrate_pubbl_altri DOUBLE,
+  apporto_capitali_privati DOUBLE,
+  sfruttamento_bene DOUBLE,
+  fondi_bilancio_sa DOUBLE,
+  entrate_pubbl_comunitaria DOUBLE,
+  entrate_privati DOUBLE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- fine_contratto
+CREATE TABLE IF NOT EXISTS fine_contratto (
+  cig VARCHAR(50) PRIMARY KEY,
+  cod_motivo_risoluzione INT,
+  motivo_risoluzione TEXT,
+  cod_motivo_interruzione_anticipata INT,
+  motivo_interruzione_anticipata TEXT,
+  data_conclusione_anticipata DATE,
+  data_effettiva_ultimazione DATE,
+  id_aggiudicazione INT,
+  giorni_proroga INT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- collaudo
+CREATE TABLE IF NOT EXISTS collaudo (
+  cig VARCHAR(50) PRIMARY KEY,
+  data_delibera DATE,
+  data_cert_collaudo DATE,
+  esito_collaudo TEXT,
+  data_inizio_oper DATE,
+  data_regolare_esec DATE,
+  data_nomina_coll DATE,
+  data_collaudo_stat DATE,
+  id_aggiudicazione INT,
+  riserve_avanzate DOUBLE,
+  riserve_definite DOUBLE,
+  importo_contenz_risolto DOUBLE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- categorie_opera 
+CREATE TABLE IF NOT EXISTS categorie_opera (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  cig VARCHAR(255),
+  id_categoria VARCHAR(50),
+  descrizione TEXT,
+  cod_tipo_categoria VARCHAR(50)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- categorie_dpcm_aggregazione 
+CREATE TABLE IF NOT EXISTS categorie_dpcm_aggregazione (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  id_categoria VARCHAR(50),
+  descrizione TEXT,
+  cod_tipo_categoria VARCHAR(10),
+  cig VARCHAR(255)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- avvio_contratto
+CREATE TABLE IF NOT EXISTS avvio_contratto (
+  cig VARCHAR(50) PRIMARY KEY,
+  data_stipula_contratto DATE,
+  data_esecutiva_contratto DATE,
+  data_termine_contrattuale DATE,
+  data_verbale_consegna_definitiva DATE,
+  data_inizio_effettiva DATE,
+  data_verbale_prima_consegna DATE,
+  consegna_frazionata INT,
+  consegna_sotto_riserva INT,
+  id_aggiudicazione INT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- aggiudicatari
+CREATE TABLE IF NOT EXISTS aggiudicatari (
+  codice_fiscale VARCHAR(16) PRIMARY KEY,
+  cig VARCHAR(10),
+  ruolo VARCHAR(20),
+  denominazione VARCHAR(30),
+  tipo_soggetto VARCHAR(30),
+  id_aggiudicazioni INT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ================
+-- CHIAVI ESTERNE
+-- ================
+
+-- Relazioni con bando_cig
+ALTER TABLE stazioni_appaltanti
+  ADD CONSTRAINT fk_stazioni_appaltanti_cig
+  FOREIGN KEY (cig) REFERENCES bando_cig(cig);
+
+ALTER TABLE cup
+  ADD CONSTRAINT fk_cup_cig
+  FOREIGN KEY (cig) REFERENCES bando_cig(cig);
+
+ALTER TABLE categorie_opera
+  ADD CONSTRAINT fk_categorie_opera_cig
+  FOREIGN KEY (cig) REFERENCES bando_cig(cig);
+
+ALTER TABLE categorie_dpcm_aggregazione
+  ADD CONSTRAINT fk_categorie_dpcm_aggregazione_cig
+  FOREIGN KEY (cig) REFERENCES bando_cig(cig);
+
+ALTER TABLE lavorazioni
+  ADD CONSTRAINT fk_lavorazioni_cig
+  FOREIGN KEY (cig) REFERENCES bando_cig(cig);
+
+ALTER TABLE partecipanti
+  ADD CONSTRAINT fk_partecipanti_cig
+  FOREIGN KEY (cig) REFERENCES bando_cig(cig);
+
+ALTER TABLE aggiudicazioni
+  ADD CONSTRAINT fk_aggiudicazioni_cig
+  FOREIGN KEY (cig) REFERENCES bando_cig(cig);
+
+-- Relazioni con aggiudicazioni
+ALTER TABLE aggiudicatari
+  ADD CONSTRAINT fk_aggiudicatari_id_aggiudicazioni
+  FOREIGN KEY (id_aggiudicazioni) REFERENCES aggiudicazioni(id_aggiudicazione);
+
+ALTER TABLE fonti_finanziamento
+  ADD CONSTRAINT fk_fonti_finanziamento_id_aggiudicazione
+  FOREIGN KEY (id_aggiudicazione) REFERENCES aggiudicazioni(id_aggiudicazione);
+
+ALTER TABLE quadro_economico
+  ADD CONSTRAINT fk_quadro_economico_id_aggiudicazione
+  FOREIGN KEY (id_aggiudicazione) REFERENCES aggiudicazioni(id_aggiudicazione);
+
+ALTER TABLE subappalti
+  ADD CONSTRAINT fk_subappalti_id_aggiudicazione
+  FOREIGN KEY (id_aggiudicazione) REFERENCES aggiudicazioni(id_aggiudicazione);
+
+ALTER TABLE stati_avanzamento
+  ADD CONSTRAINT fk_stati_avanzamento_id_aggiudicazione
+  FOREIGN KEY (id_aggiudicazione) REFERENCES aggiudicazioni(id_aggiudicazione);
+
+ALTER TABLE varianti
+  ADD CONSTRAINT fk_varianti_id_aggiudicazione
+  FOREIGN KEY (id_aggiudicazione) REFERENCES aggiudicazioni(id_aggiudicazione);
+
+ALTER TABLE fine_contratto
+  ADD CONSTRAINT fk_fine_contratto_id_aggiudicazione
+  FOREIGN KEY (id_aggiudicazione) REFERENCES aggiudicazioni(id_aggiudicazione);
+
+ALTER TABLE collaudo
+  ADD CONSTRAINT fk_collaudo_id_aggiudicazione
+  FOREIGN KEY (id_aggiudicazione) REFERENCES aggiudicazioni(id_aggiudicazione);
+
+ALTER TABLE avvio_contratto
+  ADD CONSTRAINT fk_avvio_contratto_id_aggiudicazione
+  FOREIGN KEY (id_aggiudicazione) REFERENCES aggiudicazioni(id_aggiudicazione);

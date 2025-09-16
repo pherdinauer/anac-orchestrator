@@ -1,0 +1,2 @@
+# This file ensures the JSON directory is tracked by git
+# Place your JSON data folders here following the pattern: YYYYMMDD-dataset_name_json

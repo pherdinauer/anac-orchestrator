@@ -1,0 +1,143 @@
+Hai ragione 👍
+Il file l’ho salvato ma nel reset dell’ambiente non è più disponibile. Te lo riporto direttamente qui sotto così puoi copiarlo/incollarlo tu e darlo a Cursor.
+
+---
+
+# **Prompt per Cursor – ANAC Orchestrator (Schema + Discovery)**
+
+**Titolo:** ANAC Orchestrator — DB Creation from TXT + FK Additions + ETL Service Tables (NO CIG LENGTH CHANGE)
+
+---
+
+## **Obiettivo**
+
+Costruire una CLI Python che gestisca:
+
+1. **Creazione/aggiornamento schema** partendo da `Script_creazioneDB_Anac.txt` (migrazione v1).
+2. **Migrazione v2** con le sole modifiche concordate:
+
+   * NON modificare i tipi/lunghezze dei campi `cig` (rimangono come nel TXT: 255, 10, ecc.).
+   * Confermare/assicurare **PK su `bando_cig(cig)`**.
+   * Aggiungere **FK esplicite** verso `bando_cig(cig)` seguendo lo schema indicato (esempio:
+
+     ```sql
+     ALTER TABLE cup
+       ADD CONSTRAINT fk_cup_cig
+       FOREIGN KEY (cig) REFERENCES bando_cig(cig);
+     ```
+
+     usare la convenzione `fk_<tabella>_cig` per altri figli diretti di `bando_cig`).
+   * Aggiungere **tabelle di servizio ETL** (`etl_runs`, `etl_files`, `etl_rejects`).
+   * Aggiungere indici di supporto per ricerche e join.
+3. **Dataset discovery + registry** (YAML) per mappare dataset ↔ tabelle core.
+4. **Comandi CLI**: `migrate up`, `discover`, `registry export`.
+
+---
+
+## **Inputs**
+
+* TXT sorgente schema v1: `Script_creazioneDB_Anac.txt`.
+* RAW root: `/database/JSON/` (cartelle tipo `YYYYMMDD-<dataset>_json/`).
+* NDJSON root (per ingest futuro): `/database/NDJSON/`.
+* Config: `/config/anac_etl.yml`.
+
+---
+
+## **Vincoli**
+
+* Nessuna modifica alla lunghezza di `cig`.
+* PK su `bando_cig(cig)`.
+* Aggiungere FK con logica `fk_<tabella>_cig` quando implicite dal TXT (es. `cup.cig` → `bando_cig.cig`).
+* Aggiungere tabelle ETL:
+
+  ```sql
+  CREATE TABLE etl_runs (
+    run_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    started_at DATETIME,
+    ended_at DATETIME,
+    status ENUM('OK','ERROR','PARTIAL'),
+    total_files INT,
+    total_rows BIGINT,
+    total_errors INT,
+    notes TEXT,
+    git_hash VARCHAR(40)
+  );
+  CREATE TABLE etl_files (
+    file_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    run_id BIGINT,
+    dataset VARCHAR(64),
+    path TEXT,
+    md5 CHAR(32),
+    rows_loaded BIGINT,
+    status ENUM('OK','ERROR'),
+    error_msg TEXT,
+    started_at DATETIME,
+    ended_at DATETIME,
+    KEY(run_id),
+    KEY(dataset)
+  );
+  CREATE TABLE etl_rejects (
+    run_id BIGINT,
+    dataset VARCHAR(64),
+    reason VARCHAR(128),
+    payload_json JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY(run_id),
+    KEY(dataset)
+  );
+  ```
+* Indici da aggiungere (solo se non già presenti):
+
+  * `bando_cig(cf_amministrazione_appaltante)`
+  * `aggiudicazioni(cig)`, `aggiudicazioni(id_aggiudicazione)`
+  * `partecipanti(cig)`, `aggiudicatari(id_aggiudicazioni)`
+  * `subappalti(id_aggiudicazione)`, `stati_avanzamento(id_aggiudicazione)`, `varianti(id_aggiudicazione)`, `fine_contratto(id_aggiudicazione)`, `collaudo(id_aggiudicazione)`, `quadro_economico(id_aggiudicazione)`, `fonti_finanziamento(id_aggiudicazione)`.
+
+---
+
+## **Sistema di migrazioni**
+
+* Tabella `schema_version(version INT PRIMARY KEY, applied_at TIMESTAMP, checksum VARCHAR(64), notes TEXT)`.
+* **v1** = esegue il TXT così com’è.
+* **v2** = applica solo le modifiche sopra.
+* Idempotente: controllare prima di creare FK, indici, tabelle ETL.
+* Ogni migrazione in transazione con rollback su errore.
+* Sanity check finale: tutte le tabelle/PK/FK previste esistono, FK `cup→bando_cig` presente, ETL tables create.
+
+---
+
+## **Dataset discovery + registry**
+
+* Comando `discover`: scandaglia `/database/JSON/`, trova cartelle tipo `YYYYMMDD-<dataset>_json`, estrae `<dataset>`.
+* Genera/aggiorna `registry.yml` con campi:
+
+  * `name`, `folder_glob`, `json_pointer`, `core_table`, `stg_json_table`, `stg_table`, `key`, `depends_on`, `select_map`, `upsert_update_fields`.
+* Precompilare:
+
+  * `bando_cig` (PK cig)
+  * `aggiudicazioni` (PK id\_aggiudicazione, FK cig)
+  * figli di `aggiudicazioni`: `aggiudicatari`, `partecipanti`, `subappalti`, `stati_avanzamento`, `varianti`, `fine_contratto`, `collaudo`, `quadro_economico`, `fonti_finanziamento`
+  * figli di `bando_cig`: `stazioni_appaltanti`, `cup`, `categorie_opera`, `categorie_dpcm_aggregazione`, `lavorazioni`, `partecipanti`.
+* Dataset non riconosciuti → riportati nel log ma non errore.
+
+---
+
+## **Comandi CLI**
+
+* `migrate up` → applica v1 (TXT) e v2 (FK + ETL + indici).
+* `discover` → elenca dataset RAW trovati.
+* `registry export` → aggiorna/salva `/config/anac_etl.yml`.
+
+---
+
+## **Acceptance Criteria**
+
+* `migrate up` su DB vuoto → schema del TXT + ETL tables + FK aggiunte + indici.
+* `discover` → lista dataset dalle cartelle, distinguendo mappati e ignoti.
+* `registry export` → YAML con almeno `bando_cig` e `aggiudicazioni` configurati.
+* Nessuna modifica alla lunghezza dei campi `cig`.
+* Tutto idempotente, nessun path hard-coded, log chiari.
+
+---
+
+Vuoi che ti prepari anche un **secondo prompt** specifico per Cursor per la fase **ingest** (conversione JSON→NDJSON, LOAD DATA in staging, UPSERT su core)?
