@@ -145,8 +145,13 @@ database/NDJSON/*/data/
 
 # Configuration files with sensitive data
 .env
+.env.local
+.env.production
 config/local_*.yml
 config/production_*.yml
+
+# Auto-generated configuration files
+config/anac_etl.yml
 
 # Temporary files
 *.tmp

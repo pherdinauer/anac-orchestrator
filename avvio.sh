@@ -43,6 +43,30 @@ if [ ! -d ".git" ]; then
     exit 1
 fi
 
+# Funzione per gestire automaticamente i file di configurazione
+setup_config_files() {
+    # Gestisci .env
+    if [ ! -f ".env" ]; then
+        if [ -f ".env.example" ]; then
+            log "Creazione file .env da .env.example..."
+            cp .env.example .env
+            warning "File .env creato da .env.example"
+            warning "Modifica .env con le tue credenziali specifiche"
+        else
+            warning "File .env non trovato, usando configurazione di default"
+        fi
+    fi
+    
+    # Gestisci altri file di configurazione se necessario
+    if [ ! -f "config/anac_etl.yml" ] && [ -f "config/anac_etl.yml.example" ]; then
+        log "Creazione configurazione da template..."
+        cp config/anac_etl.yml.example config/anac_etl.yml 2>/dev/null || true
+    fi
+}
+
+# Setup file di configurazione
+setup_config_files
+
 # Carica variabili d'ambiente se il file .env esiste
 if [ -f ".env" ]; then
     log "Caricamento configurazione da .env..."
@@ -53,7 +77,6 @@ if [ -f ".env" ]; then
     success "Configurazione caricata"
 else
     warning "File .env non trovato, usando configurazione di default"
-    warning "Copia .env.example in .env e configura le tue credenziali"
 fi
 
 # Verifica dipendenze
@@ -99,8 +122,70 @@ success "Dipendenze verificate e virtual environment attivato"
 # Pull dell'ultima versione
 log "Aggiornamento codice da GitHub..."
 
+# Funzione per gestire automaticamente i conflitti Git
+handle_git_conflicts() {
+    # Controlla se ci sono modifiche locali
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        warning "Modifiche locali rilevate, tentativo di risoluzione automatica..."
+        
+        # Identifica i file modificati
+        modified_files=$(git diff --name-only 2>/dev/null || echo "")
+        staged_files=$(git diff --cached --name-only 2>/dev/null || echo "")
+        
+        # Gestisci file di configurazione specifici
+        if echo "$modified_files $staged_files" | grep -q "\.env\|\.env\.example\|config/"; then
+            log "File di configurazione modificati rilevati..."
+            
+            # Per i file di configurazione, mantieni le versioni locali
+            for file in .env .env.example config/anac_etl.yml; do
+                if [ -f "$file" ] && (echo "$modified_files $staged_files" | grep -q "$file"); then
+                    log "Mantenendo versione locale di $file"
+                    git checkout -- "$file" 2>/dev/null || true
+                fi
+            done
+        fi
+        
+        # Stash delle modifiche locali rimanenti
+        log "Salvataggio modifiche locali..."
+        if git stash push -m "Auto-stash before pull $(date)" 2>/dev/null; then
+            success "Modifiche locali salvate temporaneamente"
+        else
+            warning "Impossibile salvare le modifiche, tentativo di reset..."
+            # Se lo stash fallisce, prova a fare un reset soft
+            git reset --soft HEAD 2>/dev/null || true
+        fi
+        
+        # Prova il pull
+        if git pull origin main 2>/dev/null; then
+            success "Codice aggiornato con successo"
+            
+            # Ripristina le modifiche locali se possibile
+            if git stash list | grep -q "Auto-stash before pull"; then
+                log "Tentativo di ripristino modifiche locali..."
+                if git stash pop 2>/dev/null; then
+                    success "Modifiche locali ripristinate"
+                else
+                    warning "Conflitti durante il ripristino, le modifiche sono salvate in stash"
+                    warning "Usa 'git stash list' per vedere le modifiche salvate"
+                fi
+            fi
+        else
+            error "Errore durante il pull anche dopo lo stash"
+            error "Prova manualmente: git pull origin main"
+            return 1
+        fi
+    else
+        # Nessuna modifica locale, pull normale
+        if git pull origin main 2>/dev/null; then
+            success "Codice aggiornato con successo"
+        else
+            return 1
+        fi
+    fi
+}
+
 # Risolvi eventuali problemi di ownership Git
-if ! git pull origin main 2>/dev/null; then
+if ! handle_git_conflicts; then
     warning "Problema con Git ownership rilevato"
     log "Tentativo di risoluzione automatica..."
     
@@ -123,18 +208,14 @@ if ! git pull origin main 2>/dev/null; then
         fi
     fi
     
-    # Riprova il pull
-    if git pull origin main; then
-        success "Codice aggiornato dopo risoluzione problemi Git"
-    else
+    # Riprova la gestione dei conflitti
+    if ! handle_git_conflicts; then
         error "Errore durante il pull del codice"
         error "Prova a riclonare il repository:"
         error "  cd .. && rm -rf anac-orchestrator"
         error "  git clone https://github.com/pherdinauer/anac-orchestrator.git"
         exit 1
     fi
-else
-    success "Codice aggiornato con successo"
 fi
 
 # Installa/aggiorna dipendenze Python (nel virtual environment)
