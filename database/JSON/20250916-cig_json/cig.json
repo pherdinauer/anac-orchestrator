@@ -1,0 +1,29 @@
+[
+  {
+    "cig": "CIG001",
+    "cf_amministrazione_appaltante": "CF001",
+    "denominazione_amministrazione_appaltante": "Comune di Roma",
+    "oggetto_gara": "Fornitura servizi informatici",
+    "importo_complessivo_gara": 150000.0,
+    "data_pubblicazione": "2024-02-01",
+    "data_scadenza_offerta": "2024-03-01"
+  },
+  {
+    "cig": "CIG002",
+    "cf_amministrazione_appaltante": "CF002",
+    "denominazione_amministrazione_appaltante": "Regione Lazio",
+    "oggetto_gara": "Lavori di manutenzione strade",
+    "importo_complessivo_gara": 500000.0,
+    "data_pubblicazione": "2024-02-02",
+    "data_scadenza_offerta": "2024-03-02"
+  },
+  {
+    "cig": "CIG003",
+    "cf_amministrazione_appaltante": "CF003",
+    "denominazione_amministrazione_appaltante": "ASL Roma 1",
+    "oggetto_gara": "Fornitura materiale sanitario",
+    "importo_complessivo_gara": 75000.0,
+    "data_pubblicazione": "2024-02-03",
+    "data_scadenza_offerta": "2024-03-03"
+  }
+]

@@ -1,0 +1,48 @@
+database:
+  host: localhost
+  name: anac_db
+  port: 3306
+  user: root
+etl:
+  batch_size: 1000
+  max_retries: 3
+  parallel_workers: 4
+paths:
+  json_root: database/JSON
+  logs_root: database/logs
+  ndjson_root: database/NDJSON
+registry:
+  datasets:
+    aggiudicazioni:
+      core_table: aggiudicazioni
+      depends_on:
+      - cig
+      folder_glob: '*-aggiudicazioni_json'
+      json_pointer: item
+      key: id_aggiudicazione
+      last_seen: 20240201-aggiudicazioni_json
+      name: aggiudicazioni
+      select_map:
+        cig: JSON_UNQUOTE(JSON_EXTRACT(payload, "$.cig"))
+        data_aggiudicazione_definitiva: JSON_UNQUOTE(JSON_EXTRACT(payload, "$.data_aggiudicazione_definitiva"))
+        esito: JSON_UNQUOTE(JSON_EXTRACT(payload, "$.esito"))
+        id_aggiudicazione: CAST(JSON_UNQUOTE(JSON_EXTRACT(payload, "$.id_aggiudicazione"))
+          AS INT)
+        importo_aggiudicazione: CAST(JSON_UNQUOTE(JSON_EXTRACT(payload, "$.importo_aggiudicazione"))
+          AS DOUBLE)
+      stg_json_table: stg_aggiudicazioni_json
+      stg_table: stg_aggiudicazioni
+      upsert_update_fields:
+      - importo_aggiudicazione
+      - data_aggiudicazione_definitiva
+      - esito
+  discovery_timestamp: C:\Users\desiderato\Documents\ANAC DB ULTIMATE
+  json_root: C:\Users\DESIDE~1\AppData\Local\Temp\tmp3zww2ztf\JSON
+  ndjson_root: database\NDJSON
+  unknown_datasets:
+  - folder: 20240201-bando_cig_json
+    name: bando_cig
+    path: C:\Users\DESIDE~1\AppData\Local\Temp\tmp3zww2ztf\JSON\20240201-bando_cig_json
+  - folder: 20240201-unknown_dataset_json
+    name: unknown_dataset
+    path: C:\Users\DESIDE~1\AppData\Local\Temp\tmp3zww2ztf\JSON\20240201-unknown_dataset_json

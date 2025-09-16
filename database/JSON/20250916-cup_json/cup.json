@@ -1,0 +1,17 @@
+[
+  {
+    "cig": "CIG001",
+    "codice_cup": "CUP001",
+    "descrizione_cup": "Servizi informatici e telematici"
+  },
+  {
+    "cig": "CIG002",
+    "codice_cup": "CUP002",
+    "descrizione_cup": "Lavori di costruzione e manutenzione"
+  },
+  {
+    "cig": "CIG003",
+    "codice_cup": "CUP003",
+    "descrizione_cup": "Forniture sanitarie e mediche"
+  }
+]
