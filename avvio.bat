@@ -52,7 +52,25 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [SUCCESS] Dipendenze verificate
+REM Verifica se il virtual environment esiste
+if not exist "venv" (
+    echo [WARNING] Virtual environment non trovato!
+    echo [INFO] Esecuzione setup virtual environment...
+    if exist "setup_venv.bat" (
+        call setup_venv.bat
+    ) else (
+        echo [ERROR] Script setup_venv.bat non trovato!
+        echo [ERROR] Esegui manualmente: python -m venv venv
+        pause
+        exit /b 1
+    )
+)
+
+REM Attiva virtual environment
+echo [INFO] Attivazione virtual environment...
+call venv\Scripts\activate.bat
+
+echo [SUCCESS] Dipendenze verificate e virtual environment attivato
 
 REM Pull dell'ultima versione
 echo [INFO] Aggiornamento codice da GitHub...
@@ -64,7 +82,7 @@ if errorlevel 1 (
 )
 echo [SUCCESS] Codice aggiornato con successo
 
-REM Installa/aggiorna dipendenze Python
+REM Installa/aggiorna dipendenze Python (nel virtual environment)
 echo [INFO] Installazione dipendenze Python...
 pip install -r requirements.txt --quiet
 if errorlevel 1 (

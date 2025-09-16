@@ -76,7 +76,25 @@ if ! command -v mysql &> /dev/null; then
     warning "MySQL client non trovato, alcune funzionalità potrebbero non funzionare"
 fi
 
-success "Dipendenze verificate"
+# Verifica se il virtual environment esiste
+if [ ! -d "venv" ]; then
+    warning "Virtual environment non trovato!"
+    log "Esecuzione setup virtual environment..."
+    if [ -f "setup_venv.sh" ]; then
+        chmod +x setup_venv.sh
+        ./setup_venv.sh
+    else
+        error "Script setup_venv.sh non trovato!"
+        error "Esegui manualmente: python3 -m venv venv"
+        exit 1
+    fi
+fi
+
+# Attiva virtual environment
+log "Attivazione virtual environment..."
+source venv/bin/activate
+
+success "Dipendenze verificate e virtual environment attivato"
 
 # Pull dell'ultima versione
 log "Aggiornamento codice da GitHub..."
@@ -119,9 +137,9 @@ else
     success "Codice aggiornato con successo"
 fi
 
-# Installa/aggiorna dipendenze Python
+# Installa/aggiorna dipendenze Python (nel virtual environment)
 log "Installazione dipendenze Python..."
-if pip3 install -r requirements.txt --quiet; then
+if pip install -r requirements.txt --quiet; then
     success "Dipendenze Python installate"
 else
     error "Errore durante l'installazione delle dipendenze"
@@ -130,7 +148,7 @@ fi
 
 # Installa il pacchetto in modalità development
 log "Installazione pacchetto ANAC Orchestrator..."
-if pip3 install -e . --quiet; then
+if pip install -e . --quiet; then
     success "Pacchetto installato"
 else
     error "Errore durante l'installazione del pacchetto"
@@ -208,7 +226,7 @@ while true; do
             ;;
         7)
             log "Test sistema..."
-            python3 test_system.py
+            python test_system.py
             ;;
         8)
             success "Arrivederci!"
